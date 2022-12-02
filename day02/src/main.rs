@@ -3,8 +3,8 @@ use std::io::Read;
 use std::path::Path;
 
 fn main() {
-    println!("Hello, world!");
     println!("Part1: {}", part_one("input1.txt"));
+    println!("Part1: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> i32 {
@@ -35,6 +35,34 @@ fn part_one(filepath: &str) -> i32 {
     sum
 }
 
+fn part_two(filepath: &str) -> i32 {
+    let content = get_content(filepath.to_string());
+    let values = content.split('\n');
+    let mut sum = 0;
+    for line in values {
+        if line.is_empty() {
+            continue;
+        }
+        let hands: Vec<&str> = line.split(' ').into_iter().collect();
+        let other_hand = hands.first().unwrap();
+        let my_hand = hands.last().unwrap();
+        let other_hand = match *other_hand {
+            "A" => Hand::Rock,
+            "B" => Hand::Paper,
+            "C" => Hand::Scissors,
+            _ => panic!(),
+        };
+        let my_hand = match *my_hand {
+            "X" => other_hand.wins_against(),
+            "Y" => other_hand.clone(),
+            "Z" => other_hand.defeated_by(),
+            _ => panic!(),
+        };
+        sum += my_hand.round(&other_hand);
+    }
+    sum
+}
+
 fn get_content(input: String) -> String {
     let path = Path::new(&input);
     let mut file = File::open(path).unwrap();
@@ -43,7 +71,7 @@ fn get_content(input: String) -> String {
     content
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Clone)]
 enum Hand {
     Rock,
     Paper,
@@ -71,16 +99,12 @@ impl Hand {
         self.result(other_hand).score() + self.intrinsic_value()
     }
     fn result(&self, other_hand: &Hand) -> Result {
-        match (self, other_hand) {
-            (Hand::Rock, Hand::Rock) => Result::Draw,
-            (Hand::Scissors, Hand::Scissors) => Result::Draw,
-            (Hand::Paper, Hand::Paper) => Result::Draw,
-            (Hand::Rock, Hand::Scissors) => Result::Win,
-            (Hand::Scissors, Hand::Paper) => Result::Win,
-            (Hand::Paper, Hand::Rock) => Result::Win,
-            (Hand::Paper, Hand::Scissors) => Result::Lose,
-            (Hand::Rock, Hand::Paper) => Result::Lose,
-            (Hand::Scissors, Hand::Rock) => Result::Lose,
+        if self.defeated_by() == *other_hand {
+            Result::Lose
+        } else if other_hand.defeated_by() == *self {
+            Result::Win
+        } else {
+            Result::Draw
         }
     }
     fn intrinsic_value(&self) -> i32 {
@@ -88,6 +112,20 @@ impl Hand {
             Hand::Rock => 1,
             Hand::Paper => 2,
             Hand::Scissors => 3,
+        }
+    }
+    fn defeated_by(&self) -> Hand {
+        match self {
+            Hand::Rock => Hand::Paper,
+            Hand::Paper => Hand::Scissors,
+            Hand::Scissors => Hand::Rock,
+        }
+    }
+    fn wins_against(&self) -> Hand {
+        match self {
+            Hand::Rock => Hand::Scissors,
+            Hand::Paper => Hand::Rock,
+            Hand::Scissors => Hand::Paper,
         }
     }
 }
