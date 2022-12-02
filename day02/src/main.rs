@@ -15,21 +15,9 @@ fn part_one(filepath: &str) -> i32 {
         if line.is_empty() {
             continue;
         }
-        let hands: Vec<&str> = line.split(' ').into_iter().collect();
-        let other_hand = hands.first().unwrap();
-        let my_hand = hands.last().unwrap();
-        let other_hand = match *other_hand {
-            "A" => Hand::Rock,
-            "B" => Hand::Paper,
-            "C" => Hand::Scissors,
-            _ => panic!(),
-        };
-        let my_hand = match *my_hand {
-            "X" => Hand::Rock,
-            "Y" => Hand::Paper,
-            "Z" => Hand::Scissors,
-            _ => panic!(),
-        };
+        let mut hands: Vec<&str> = line.split(' ').into_iter().collect();
+        let my_hand: Hand = hands.pop().unwrap().into();
+        let other_hand: Hand = hands.pop().unwrap().into();
         sum += my_hand.round(&other_hand);
     }
     sum
@@ -71,13 +59,6 @@ fn get_content(input: String) -> String {
     content
 }
 
-#[derive(PartialEq, Clone)]
-enum Hand {
-    Rock,
-    Paper,
-    Scissors,
-}
-
 enum Result {
     Win,
     Draw,
@@ -92,6 +73,13 @@ impl Result {
             Result::Win => 6,
         }
     }
+}
+
+#[derive(PartialEq, Clone)]
+enum Hand {
+    Rock,
+    Paper,
+    Scissors,
 }
 
 impl Hand {
@@ -126,6 +114,20 @@ impl Hand {
             Hand::Rock => Hand::Scissors,
             Hand::Paper => Hand::Rock,
             Hand::Scissors => Hand::Paper,
+        }
+    }
+}
+
+impl From<&str> for Hand {
+    fn from(input: &str) -> Self {
+        match input {
+            "A" => Hand::Rock,
+            "B" => Hand::Paper,
+            "C" => Hand::Scissors,
+            "X" => Hand::Rock,
+            "Y" => Hand::Paper,
+            "Z" => Hand::Scissors,
+            _ => panic!(),
         }
     }
 }
