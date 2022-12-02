@@ -31,16 +31,10 @@ fn part_two(filepath: &str) -> i32 {
         if line.is_empty() {
             continue;
         }
-        let hands: Vec<&str> = line.split(' ').into_iter().collect();
-        let other_hand = hands.first().unwrap();
-        let my_hand = hands.last().unwrap();
-        let other_hand = match *other_hand {
-            "A" => Hand::Rock,
-            "B" => Hand::Paper,
-            "C" => Hand::Scissors,
-            _ => panic!(),
-        };
-        let my_hand = match *my_hand {
+        let mut hands: Vec<&str> = line.split(' ').into_iter().collect();
+        let strategy = hands.pop().unwrap();
+        let other_hand: Hand = hands.pop().unwrap().into();
+        let my_hand = match strategy {
             "X" => other_hand.wins_against(),
             "Y" => other_hand.clone(),
             "Z" => other_hand.defeated_by(),
