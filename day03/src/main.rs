@@ -5,7 +5,7 @@ use std::path::Path;
 fn main() {
     println!("Hello, world!");
     println!("Part one: {}", part_one("input1.txt"));
-    //println!("Part two: {}", part_two("input1.txt"));
+    println!("Part two: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> i32 {
@@ -25,6 +25,38 @@ fn part_one(filepath: &str) -> i32 {
                 if item == other_item {
                     sum += item.priority() as i32;
                     break 'outer;
+                }
+            }
+        }
+    }
+    sum
+}
+
+fn part_two(filepath: &str) -> i32 {
+    let content = get_content(filepath.to_string());
+    let mut lines = content.lines();
+    let mut sum: i32 = 0;
+    let mut groups: Vec<(&str, &str, &str)> = Vec::new();
+    loop {
+        let group = (lines.next(), lines.next(), lines.next());
+        if group.0.is_none() {
+            break;
+        }
+        groups.push((group.0.unwrap(), group.1.unwrap(), group.2.unwrap()))
+    }
+    for (first, second, third) in groups {
+        'outer: for c in first.chars() {
+            let item = Item::new(c);
+            for c2 in second.chars() {
+                let item2 = Item::new(c2);
+                if item == item2 {
+                    for c3 in third.chars() {
+                        let item3 = Item::new(c3);
+                        if item2 == item3 {
+                            sum += item.priority() as i32;
+                            break 'outer;
+                        }
+                    }
                 }
             }
         }
