@@ -40,7 +40,37 @@ fn part_one(filepath: &str) -> i32 {
 }
 
 fn part_two(filepath: &str) -> i32 {
-    0
+    let lines = get_lines(filepath);
+    let split: Vec<((i32, i32), (i32, i32))> = lines
+        .iter()
+        .map(|line| line.split(','))
+        .map(|mut split| (split.next().unwrap(), split.next().unwrap()))
+        .map(|(left, right): (&str, &str)| (left.split('-'), right.split('-')))
+        .map(|(mut left, mut right)| {
+            (
+                (left.next().unwrap(), left.next().unwrap()),
+                (right.next().unwrap(), right.next().unwrap()),
+            )
+        })
+        .map(|((left_low, left_high), (right_low, right_high))| {
+            (
+                (left_low.parse().unwrap(), left_high.parse().unwrap()),
+                (right_low.parse().unwrap(), right_high.parse().unwrap()),
+            )
+        })
+        .collect();
+    let mut count = 0;
+    for ((left_low, left_high), (right_low, right_high)) in split {
+        let left_range = left_low..=left_high;
+        let right_range = right_low..=right_high;
+        for x in left_range {
+            if right_range.contains(&x) {
+                count += 1;
+                break;
+            }
+        }
+    }
+    count
 }
 
 fn get_lines(filepath: &str) -> Vec<String> {
