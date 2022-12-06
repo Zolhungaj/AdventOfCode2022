@@ -4,7 +4,6 @@ use std::io::Read;
 use std::path::Path;
 
 fn main() {
-    println!("Hello, world!");
     assert_eq!(5, part_one("input2.txt"));
     assert_eq!(6, part_one("input3.txt"));
     assert_eq!(10, part_one("input4.txt"));
@@ -22,52 +21,25 @@ fn main() {
 
 fn part_one(filepath: &str) -> usize {
     let content = get_content(filepath.to_string());
-    let mut buffer: VecDeque<char> = VecDeque::new();
-    'outer: for (position, current) in content.split("").enumerate() {
-        println!("{}, {}", position, current);
-        if current.is_empty() {
-            continue;
-        }
-        if buffer.len() >= 4 {
-            buffer.pop_front();
-        }
-        buffer.push_back(current.chars().next().unwrap());
-        println!("{:?}, {}", buffer, buffer.len());
-        if buffer.len() == 4 {
-            let mut second_buffer: Vec<char> = Vec::new();
-            let mut success = true;
-            while !buffer.is_empty() {
-                let c = buffer.pop_front().unwrap();
-                if second_buffer.contains(&c) {
-                    success = false;
-                }
-                second_buffer.push(c);
-            }
-            if success {
-                return position;
-            }
-            for c in second_buffer {
-                buffer.push_back(c);
-            }
-        }
-    }
-    0
+    find_first_sequence_of_unique_characters(content, 4)
 }
 
 fn part_two(filepath: &str) -> usize {
     let content = get_content(filepath.to_string());
+    find_first_sequence_of_unique_characters(content, 14)
+}
+
+fn find_first_sequence_of_unique_characters(content: String, length: usize) -> usize {
     let mut buffer: VecDeque<char> = VecDeque::new();
-    'outer: for (position, current) in content.split("").enumerate() {
-        println!("{}, {}", position, current);
+    for (position, current) in content.split("").enumerate() {
         if current.is_empty() {
             continue;
         }
-        if buffer.len() >= 14 {
+        if buffer.len() >= length {
             buffer.pop_front();
         }
         buffer.push_back(current.chars().next().unwrap());
-        println!("{:?}, {}", buffer, buffer.len());
-        if buffer.len() == 14 {
+        if buffer.len() == length {
             let mut second_buffer: Vec<char> = Vec::new();
             let mut success = true;
             while !buffer.is_empty() {
