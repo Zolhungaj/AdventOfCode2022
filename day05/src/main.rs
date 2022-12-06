@@ -40,7 +40,7 @@ fn part_one(filepath: &str) -> String {
             let (left, new_current) = current.split_at(3);
             current = new_current;
             if left != "   " {
-                let left = left.replace('[', "").replace(']', "");
+                let left = left.replace(['[', ']'], "");
                 stacks[i].push(left);
             }
             if current.is_empty() {
@@ -103,7 +103,7 @@ fn part_two(filepath: &str) -> String {
             let (left, new_current) = current.split_at(3);
             current = new_current;
             if left != "   " {
-                let left = left.replace('[', "").replace(']', "");
+                let left = left.replace(['[', ']'], "");
                 stacks[i].push(left);
             }
             if current.is_empty() {
