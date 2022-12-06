@@ -5,6 +5,10 @@ use std::path::Path;
 
 fn main() {
     println!("Hello, world!");
+    assert_eq!(5, part_one("input2.txt"));
+    assert_eq!(6, part_one("input3.txt"));
+    assert_eq!(10, part_one("input4.txt"));
+    assert_eq!(11, part_one("input5.txt"));
     println!("part_one: {}", part_one("input1.txt"));
 }
 
@@ -22,17 +26,21 @@ fn part_one(filepath: &str) -> usize {
         buffer.push_back(current.chars().next().unwrap());
         println!("{:?}, {}", buffer, buffer.len());
         if buffer.len() == 4 {
-            let mut last = '\0';
-            for c in &buffer {
-                if last == '\0' {
-                    last = *c;
+            let mut second_buffer: Vec<char> = Vec::new();
+            let mut success = true;
+            while !buffer.is_empty() {
+                let c = buffer.pop_front().unwrap();
+                if second_buffer.contains(&c) {
+                    success = false;
                 }
-                println!("{c}, {last}");
-                if *c != last {
-                    continue 'outer;
-                }
+                second_buffer.push(c);
             }
-            return position;
+            if success {
+                return position;
+            }
+            for c in second_buffer {
+                buffer.push_back(c);
+            }
         }
     }
     0
