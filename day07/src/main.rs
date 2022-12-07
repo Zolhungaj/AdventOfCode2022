@@ -9,51 +9,16 @@ fn main() {
 }
 
 fn part_one(filepath: &str) -> i64 {
-    let content = get_content(filepath.to_string());
-    let mut root = Folder::new("/".to_string());
-    let mut current_folder: Vec<String> = Vec::new();
-    for line in content.lines() {
-        if line.starts_with('$') {
-            let command = extract_command(line);
-            match command.name.as_str() {
-                "cd" => {
-                    let argument = command.argument.unwrap();
-                    if argument == "/" {
-                        current_folder.clear();
-                    } else if argument == ".." {
-                        current_folder.pop();
-                    } else {
-                        current_folder.push(argument);
-                    }
-                }
-                "ls" => {} //doesn't really change anything
-                _ => panic!("Unexpected command {}", command.name),
-            }
-        } else if line.starts_with("dir") {
-            let name = line.strip_prefix("dir ").unwrap();
-            let folder = Folder::new(name.to_string());
-            let mut target_folder = &mut root;
-            for name in &current_folder {
-                target_folder = target_folder.folders.get_mut(name.as_str()).unwrap();
-            }
-            target_folder.add_folder(folder);
-        } else {
-            let mut split = line.split(' ');
-            let size: i64 = split.next().unwrap().parse().unwrap();
-            let name = split.next().unwrap().to_string();
-            let mut target_folder = &mut root;
-            let file = FileItem { name, size };
-            for name in &current_folder {
-                target_folder = target_folder.folders.get_mut(name.as_str()).unwrap();
-            }
-            target_folder.files.push(file);
-        }
-    }
+    let root = navigate_tree(get_content(filepath.to_string()));
     calculate_size(&root)
 }
 
 fn part_two(filepath: &str) -> i64 {
-    let content = get_content(filepath.to_string());
+    let root = navigate_tree(get_content(filepath.to_string()));
+    calculate_smallest_that_frees_up_enough(&root)
+}
+
+fn navigate_tree(content: String) -> Folder {
     let mut root = Folder::new("/".to_string());
     let mut current_folder: Vec<String> = Vec::new();
     for line in content.lines() {
@@ -93,7 +58,7 @@ fn part_two(filepath: &str) -> i64 {
             target_folder.files.push(file);
         }
     }
-    calculate_smallest_that_frees_up_enough(&root)
+    root
 }
 
 fn extract_command(line: &str) -> Command {
