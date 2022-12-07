@@ -10,7 +10,8 @@ fn main() {
 
 fn part_one(filepath: &str) -> i64 {
     let content = get_content(filepath.to_string());
-    let mut currentFolder = &mut Folder::new("/".to_string(), None);
+    let mut root = Folder::new("/".to_string());
+    let mut current_folder: Vec<String> = Vec::new();
     for line in content.lines() {
         if line.starts_with('$') {
             let command = extract_command(line);
@@ -18,13 +19,11 @@ fn part_one(filepath: &str) -> i64 {
                 "cd" => {
                     let argument = command.argument.unwrap();
                     if argument == "/" {
-                        while currentFolder.parent.is_some() {
-                            currentFolder = currentFolder.parent.unwrap();
-                        }
+                        current_folder.clear();
                     } else if argument == ".." {
-                        currentFolder = currentFolder.parent.unwrap();
+                        current_folder.pop();
                     } else {
-                        currentFolder.folders.get_mut(argument.as_str()).unwrap();
+                        current_folder.push(argument);
                     }
                 }
                 "ls" => {} //doesn't really change anything
@@ -32,11 +31,25 @@ fn part_one(filepath: &str) -> i64 {
             }
         } else if line.starts_with("dir") {
             let name = line.strip_prefix("dir ").unwrap();
-            let folder = Folder::new(name.to_string(), Some(currentFolder));
-            currentFolder.add_folder(folder);
+            let folder = Folder::new(name.to_string());
+            let mut target_folder = &mut root;
+            for name in &current_folder {
+                target_folder = target_folder.folders.get_mut(name.as_str()).unwrap();
+            }
+            target_folder.add_folder(folder);
+        } else {
+            let mut split = line.split(' ');
+            let size: i64 = split.next().unwrap().parse().unwrap();
+            let name = split.next().unwrap().to_string();
+            let mut target_folder = &mut root;
+            let file = FileItem { name, size };
+            for name in &current_folder {
+                target_folder = target_folder.folders.get_mut(name.as_str()).unwrap();
+            }
+            target_folder.files.push(file);
         }
     }
-    0
+    calculate_size(&root)
 }
 
 fn part_two(filepath: &str) -> i64 {
@@ -51,24 +64,33 @@ fn extract_command(line: &str) -> Command {
     Command::new(command_name, command_argument)
 }
 
-struct Folder<'this, 'parent: 'this> {
-    folders: HashMap<String, Folder<'this, 'this>>,
+fn calculate_size(root: &Folder) -> i64 {
+    let mut sum = match root.size() {
+        x if x > 100000 => 0,
+        x => x,
+    };
+    for (_, folder) in &root.folders {
+        sum += calculate_size(folder);
+    }
+    sum
+}
+
+struct Folder {
+    folders: HashMap<String, Folder>,
     files: Vec<FileItem>,
-    parent: Option<&'parent mut Folder<'parent, 'parent>>,
     name: String,
 }
 
-impl<'this, 'parent: 'this> Folder<'this, 'parent> {
-    fn new(name: String, parent: Option<&'parent mut Folder<'parent, 'parent>>) -> Self {
+impl Folder {
+    fn new(name: String) -> Self {
         Folder {
             folders: HashMap::new(),
             files: Vec::new(),
-            parent,
             name,
         }
     }
 
-    fn add_folder(&mut self, folder: Folder<'this, 'parent>) {
+    fn add_folder(&mut self, folder: Folder) {
         self.folders.insert(folder.name().to_string(), folder);
     }
 
@@ -76,8 +98,10 @@ impl<'this, 'parent: 'this> Folder<'this, 'parent> {
         self.name.as_str()
     }
 
-    fn get_folder(&mut self, name: String) -> Option<&mut Folder<'this, 'this>> {
-        self.folders.get_mut(name.as_str())
+    fn size(&self) -> i64 {
+        let folder_sum: i64 = self.folders.iter().map(|(_, folder)| folder.size()).sum();
+        let file_sum: i64 = self.files.iter().map(|file| file.size).sum();
+        folder_sum + file_sum
     }
 }
 
