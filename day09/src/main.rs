@@ -5,6 +5,9 @@ use std::path::Path;
 
 fn main() {
     println!("part_one: {}", part_one("input1.txt"));
+    println!("part_two: {}", part_two("input1.txt"));
+    println!("part_two: {}", part_two("input2.txt"));
+    println!("part_two: {}", part_two("input3.txt"));
 }
 
 fn part_one(filepath: &str) -> usize {
@@ -14,15 +17,15 @@ fn part_one(filepath: &str) -> usize {
     let mut set: HashSet<(i32, i32)> = HashSet::new();
     set.insert(tail);
     for instruction in instructions {
-        let idenity_vector = match instruction.direction {
+        let identity_vector = match instruction.direction {
             Direction::Up => (0, 1),
             Direction::Down => (0, -1),
             Direction::Right => (1, 0),
             Direction::Left => (-1, 0),
         };
         let direction_vector = (
-            idenity_vector.0 * instruction.magnitude,
-            idenity_vector.1 * instruction.magnitude,
+            identity_vector.0 * instruction.magnitude,
+            identity_vector.1 * instruction.magnitude,
         );
         head = (head.0 + direction_vector.0, head.1 + direction_vector.1);
 
@@ -31,6 +34,44 @@ fn part_one(filepath: &str) -> usize {
             let identity_vector = get_identity_vector(distance);
             tail = (tail.0 + identity_vector.0, tail.1 + identity_vector.1);
             set.insert(tail);
+        }
+    }
+    set.len()
+}
+
+fn part_two(filepath: &str) -> usize {
+    let instructions = extract_instructions(filepath);
+    let mut head = (0, 0);
+    let mut knots: Vec<(i32, i32)> = Vec::new();
+    for _ in 0..9 {
+        knots.push(head);
+    }
+    let tail_pos = knots.len() - 1;
+    let mut set: HashSet<(i32, i32)> = HashSet::new();
+    set.insert(*knots.last().unwrap());
+    for instruction in instructions {
+        let identity_vector = match instruction.direction {
+            Direction::Up => (0, 1),
+            Direction::Down => (0, -1),
+            Direction::Right => (1, 0),
+            Direction::Left => (-1, 0),
+        };
+        let direction_vector = (
+            identity_vector.0 * instruction.magnitude,
+            identity_vector.1 * instruction.magnitude,
+        );
+        head = (head.0 + direction_vector.0, head.1 + direction_vector.1);
+        let mut prev = head;
+        for (position, tail) in knots.iter_mut().enumerate() {
+            while not_touching(prev, *tail) {
+                let distance = distance(prev, *tail);
+                let identity_vector = get_identity_vector(distance);
+                *tail = (tail.0 + identity_vector.0, tail.1 + identity_vector.1);
+                if position == tail_pos {
+                    set.insert(*tail);
+                }
+            }
+            prev = *tail
         }
     }
     set.len()
