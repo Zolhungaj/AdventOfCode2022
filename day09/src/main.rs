@@ -61,17 +61,19 @@ fn part_two(filepath: &str) -> usize {
             identity_vector.1 * instruction.magnitude,
         );
         head = (head.0 + direction_vector.0, head.1 + direction_vector.1);
-        let mut prev = head;
-        for (position, tail) in knots.iter_mut().enumerate() {
-            while not_touching(prev, *tail) {
-                let distance = distance(prev, *tail);
-                let identity_vector = get_identity_vector(distance);
-                *tail = (tail.0 + identity_vector.0, tail.1 + identity_vector.1);
-                if position == tail_pos {
-                    set.insert(*tail);
+        while not_touching(head, *knots.first().unwrap()) {
+            let mut prev = head;
+            for (position, tail) in knots.iter_mut().enumerate() {
+                if not_touching(prev, *tail) {
+                    let distance = distance(prev, *tail);
+                    let identity_vector = get_identity_vector(distance);
+                    *tail = (tail.0 + identity_vector.0, tail.1 + identity_vector.1);
+                    if position == tail_pos {
+                        set.insert(*tail);
+                    }
                 }
+                prev = *tail
             }
-            prev = *tail
         }
     }
     set.len()
