@@ -27,8 +27,9 @@ fn part_two(filepath: &str) -> usize {
     }
     let mut min = usize::MAX;
     for (x, y) in start_points {
-        let (tiles, (_, _)) = get_tiles(filepath);
-        min = min.min(solve(tiles, x, y));
+        let mut tiles_clone = Vec::new();
+        tiles.clone_into(&mut tiles_clone);
+        min = min.min(solve(tiles_clone, x, y));
     }
     min
 }
@@ -145,6 +146,7 @@ fn get_tiles(filepath: &str) -> (Vec<Vec<Tile>>, (usize, usize)) {
     (tile_map, start)
 }
 
+#[derive(Clone)]
 struct Tile {
     height: i32,
     end: bool,
