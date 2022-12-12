@@ -6,12 +6,36 @@ fn main() {
     println!("Hello, world!");
     println!("part_one: {}", part_one("input2.txt"));
     println!("part_one: {}", part_one("input1.txt"));
-    println!("part_two: {}", part_two("input1.txt"));
     println!("part_two: {}", part_two("input2.txt"));
+    println!("part_two: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> usize {
-    let (mut tiles, (start_x, start_y)) = get_tiles(filepath);
+    let (tiles, (start_x, start_y)) = get_tiles(filepath);
+    solve(tiles, start_x, start_y)
+}
+
+fn part_two(filepath: &str) -> usize {
+    let (tiles, (_, _)) = get_tiles(filepath);
+    let mut start_points = Vec::new();
+    for (y, row) in tiles.iter().enumerate() {
+        for (x, tile) in row.iter().enumerate() {
+            if tile.height == 0 {
+                start_points.push((x, y));
+            }
+        }
+    }
+    let mut min = usize::MAX;
+    for (x, y) in start_points {
+        let (tiles, (_, _)) = get_tiles(filepath);
+        min = min.min(solve(tiles, x, y));
+    }
+    min
+}
+
+fn solve(mut tiles: Vec<Vec<Tile>>, start_x: usize, start_y: usize) -> usize {
+    let start_tile = tiles.get_mut(start_y).unwrap().get_mut(start_x).unwrap();
+    start_tile.min_here = 0;
     let x_max = tiles.get(0).unwrap().len();
     let y_max = tiles.len();
     let mut visited = Vec::new();
@@ -86,10 +110,6 @@ fn part_one(filepath: &str) -> usize {
     min
 }
 
-fn part_two(_filepath: &str) -> i32 {
-    0
-}
-
 fn get_tiles(filepath: &str) -> (Vec<Vec<Tile>>, (usize, usize)) {
     let content = get_content(filepath.to_string());
     let mut tile_map: Vec<Vec<Tile>> = Vec::new();
@@ -108,7 +128,7 @@ fn get_tiles(filepath: &str) -> (Vec<Vec<Tile>>, (usize, usize)) {
                     Tile {
                         height: 0,
                         end: false,
-                        min_here: 0,
+                        min_here: usize::MAX,
                     }
                 }
                 'E' => Tile {
