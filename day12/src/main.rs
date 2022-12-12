@@ -85,9 +85,7 @@ fn solve(mut tiles: Vec<Vec<Tile>>, start_x: usize, start_y: usize) -> usize {
                 _ => panic!(),
             };
             let other_tile = tiles.get(next_y).unwrap().get(next_x).unwrap();
-            if (other_tile.height == current_tile.height
-                || other_tile.height == current_tile.height + 1
-                || other_tile.height == 16 && current_tile.height == 18) //input data has no places where a drop is necessary, except 's' to 'q'
+            if other_tile.height <= current_tile.height + 1
                 && other_tile.min_here > current_tile.min_here + 1
             {
                 visited.push(((current_x, current_y), next_move + 1));
