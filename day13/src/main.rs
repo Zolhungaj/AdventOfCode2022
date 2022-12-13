@@ -1,3 +1,4 @@
+use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::Read;
@@ -7,6 +8,8 @@ fn main() {
     println!("Hello, world!");
     println!("part_one: {}", part_one("input1.txt"));
     println!("part_one: {}", part_one("input2.txt"));
+    println!("part_two: {}", part_two("input2.txt"));
+    println!("part_two: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> usize {
@@ -27,6 +30,47 @@ fn part_one(filepath: &str) -> usize {
         }
     }
     sum
+}
+
+fn part_two(filepath: &str) -> usize {
+    let content = get_content(filepath.to_string());
+    let content = content.split("\n\n");
+    let mut packets: Vec<Packet> = content
+        .into_iter()
+        .map(|x| x.split('\n'))
+        .map(|mut x| (x.next().unwrap(), x.next().unwrap()))
+        .map(|(left, right)| (convert(left), convert(right)))
+        .flat_map(|(left, right)| vec![left, right])
+        .collect();
+    let divider1 = convert("[[2]]");
+    let divider2 = convert("[[6]]");
+    packets.push(divider1.clone());
+    packets.push(divider2.clone());
+
+    let mut packets_sorted: Vec<Packet> = Vec::new();
+    while !packets.is_empty() {
+        let mut smallest_index = 0;
+        for n in 1..packets.len() {
+            let smallest = packets.get(smallest_index).unwrap().clone();
+            let other = packets.get(n).unwrap().clone();
+            match compare(smallest, other) {
+                Some(false) => smallest_index = n,
+                None | Some(true) => {}
+            }
+        }
+        packets_sorted.push(packets.remove(smallest_index));
+    }
+    println!("{:?}", packets_sorted);
+    let mut product = 1;
+    for (index, packet) in packets_sorted.into_iter().enumerate() {
+        if compare(divider1.clone(), packet.clone()).is_none() {
+            product *= (index + 1);
+        }
+        if compare(divider2.clone(), packet.clone()).is_none() {
+            product *= (index + 1);
+        }
+    }
+    product
 }
 
 fn convert(input: &str) -> Packet {
@@ -114,7 +158,7 @@ fn compare_vec(left: Vec<Packet>, right: Vec<Packet>) -> Option<bool> {
         }
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 enum Packet {
     Vec(Vec<Packet>),
     Integer(i32),
