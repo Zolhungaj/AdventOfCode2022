@@ -1,4 +1,3 @@
-use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::fs::File;
 use std::io::Read;
@@ -60,14 +59,12 @@ fn part_two(filepath: &str) -> usize {
         }
         packets_sorted.push(packets.remove(smallest_index));
     }
-    println!("{:?}", packets_sorted);
     let mut product = 1;
     for (index, packet) in packets_sorted.into_iter().enumerate() {
-        if compare(divider1.clone(), packet.clone()).is_none() {
-            product *= (index + 1);
-        }
-        if compare(divider2.clone(), packet.clone()).is_none() {
-            product *= (index + 1);
+        if compare(divider1.clone(), packet.clone()).is_none()
+            || compare(divider2.clone(), packet.clone()).is_none()
+        {
+            product *= index + 1;
         }
     }
     product
@@ -127,17 +124,11 @@ fn compare(left: Packet, right: Packet) -> Option<bool> {
         Packet::Vec(left) => match right {
             Packet::Vec(right) => compare_vec(left, right),
             Packet::Integer(right) => compare_vec(left, vec![Packet::Integer(right)]),
-            Packet::Empty => Some(false),
         },
         Packet::Integer(left) => match right {
             Packet::Vec(right) => compare_vec(vec![Packet::Integer(left)], right),
             Packet::Integer(right) if right == left => None,
             Packet::Integer(right) => Some(left < right),
-            Packet::Empty => Some(false),
-        },
-        Packet::Empty => match right {
-            Packet::Empty => None,
-            _ => Some(true),
         },
     }
 }
@@ -162,7 +153,6 @@ fn compare_vec(left: Vec<Packet>, right: Vec<Packet>) -> Option<bool> {
 enum Packet {
     Vec(Vec<Packet>),
     Integer(i32),
-    Empty,
 }
 
 fn get_content(filepath: String) -> String {
