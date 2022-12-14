@@ -7,12 +7,12 @@ use std::path::Path;
 fn main() {
     println!("Hello, world!");
     println!("part_one: {}", part_one("input2.txt"));
-    //println!("part_one: {}", part_one("input1.txt"));
+    println!("part_one: {}", part_one("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> usize {
     let content = get_content(filepath.to_string());
-    let mut grid = Grid::new(1000, 10);
+    let mut grid = Grid::new(1000, 300);
     for line in content.lines() {
         let mut points = line.split(" -> ");
         let mut first_point = points.next().unwrap().split(',');
@@ -71,7 +71,6 @@ fn part_one(filepath: &str) -> usize {
         loop {
             if let Some(point) = grid.update_point(current_point) {
                 if point == current_point {
-                    println!("{:?}", current_point);
                     break;
                 } else {
                     current_point = point;
@@ -82,7 +81,7 @@ fn part_one(filepath: &str) -> usize {
         }
     }
     grid.print();
-    count
+    count - 1
 }
 
 struct Grid {
@@ -151,9 +150,9 @@ impl Grid {
                 let other_y = y + 1;
                 for n in options {
                     if x as isize + n < self.x_min as isize
-                        || y > self.y_max
-                        || x as isize + n > self.x_max as isize
-                        || y < self.y_min
+                        || other_y >= self.y_max
+                        || x as isize + n >= self.x_max as isize
+                        || other_y < self.y_min
                     {
                         //falls into the void
                         self.get_point_mut((x, y)).unwrap().content = Content::Air;
