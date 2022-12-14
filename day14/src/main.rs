@@ -8,6 +8,8 @@ fn main() {
     println!("Hello, world!");
     println!("part_one: {}", part_one("input2.txt"));
     println!("part_one: {}", part_one("input1.txt"));
+    println!("part_two: {}", part_two("input2.txt"));
+    println!("part_two: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> usize {
@@ -82,6 +84,88 @@ fn part_one(filepath: &str) -> usize {
     }
     grid.print();
     count - 1
+}
+
+fn part_two(filepath: &str) -> usize {
+    let content = get_content(filepath.to_string());
+    let mut grid = Grid::new(1000, 300);
+    let mut max_y = 0;
+    for line in content.lines() {
+        let mut points = line.split(" -> ");
+        let mut first_point = points.next().unwrap().split(',');
+        let first_point: (usize, usize) = (
+            first_point.next().unwrap().parse().unwrap(),
+            first_point.next().unwrap().parse().unwrap(),
+        );
+        let mut current_point = first_point;
+        max_y = max_y.max(current_point.1);
+        for point in points {
+            let (x, y) = current_point;
+            let mut point = point.split(',');
+            let (other_x, other_y): (usize, usize) = (
+                point.next().unwrap().parse().unwrap(),
+                point.next().unwrap().parse().unwrap(),
+            );
+            if x != other_x {
+                if x < other_x {
+                    for x in x..=other_x {
+                        print!("{:?}", (x, y));
+                        grid.set_point((x, y), Content::Rock);
+                    }
+                } else {
+                    for x in other_x..=x {
+                        print!("{:?}", (x, y));
+                        grid.set_point((x, y), Content::Rock);
+                    }
+                }
+            } else if y != other_y {
+                if y < other_y {
+                    for y in y..=other_y {
+                        print!("{:?}", (x, y));
+                        grid.set_point((x, y), Content::Rock);
+                    }
+                } else {
+                    for y in other_y..=y {
+                        print!("{:?}", (x, y));
+                        grid.set_point((x, y), Content::Rock);
+                    }
+                }
+            } else {
+                grid.set_point((x, y), Content::Rock);
+            }
+            current_point = (other_x, other_y);
+            max_y = max_y.max(current_point.1);
+            println!();
+        }
+    }
+
+    for x in 0..1000 {
+        grid.get_point_mut((x, max_y + 2)).unwrap().content = Content::Rock;
+    }
+
+    let mut count = 0;
+    'outer: loop {
+        let start_point = (500, 0);
+        if grid.get_point(start_point).unwrap().content == Content::Sand {
+            break;
+        }
+        grid.set_point(start_point, Content::Sand);
+        count += 1;
+        let mut current_point = start_point;
+        loop {
+            if let Some(point) = grid.update_point(current_point) {
+                if point == current_point {
+                    break;
+                } else {
+                    current_point = point;
+                }
+            } else {
+                break 'outer;
+            }
+        }
+    }
+    //grid.print();
+    count
 }
 
 struct Grid {
