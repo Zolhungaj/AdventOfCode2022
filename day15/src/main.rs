@@ -4,8 +4,8 @@ use std::io::Read;
 use std::path::Path;
 
 fn main() {
-    // println!("part_one: {}", part_one("input2.txt", 10));
-    // println!("part_one: {}", part_one("input1.txt", 2000000));
+    println!("part_one: {}", part_one("input2.txt", 10));
+    println!("part_one: {}", part_one("input1.txt", 2000000));
     println!("part_two: {}", part_two("input2.txt", 20));
     println!("part_two: {}", part_two("input1.txt", 4000000));
 }
@@ -90,7 +90,7 @@ fn part_two(filepath: &str, search_space_max: isize) -> usize {
             let north = (north.0 + n, north.1 + n);
             let south = (south.0 - n, south.1 - n);
             let east = (east.0 - n, east.1 + n);
-            let west = (east.0 + n, east.1 - n);
+            let west = (west.0 + n, west.1 - n);
             'clock: for (x, y) in [north, south, east, west] {
                 if x < search_space_min
                     || x > search_space_max
