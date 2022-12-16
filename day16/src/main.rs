@@ -3,14 +3,22 @@ use std::collections::{HashMap, HashSet};
 use std::io::Read;
 
 fn main() {
-    println!("part_one: {}", part_one("input2.txt"));
-    println!("part_one: {}", part_one("input1.txt"));
+    // println!("part_one: {}", part_one("input2.txt"));
+    // println!("part_one: {}", part_one("input1.txt"));
+    println!("part_two: {}", part_two("input2.txt"));
+    println!("part_two: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> i32 {
     let valve_map = create_valves(filepath);
     println!("{:#?}", valve_map);
     traverse("AA", &valve_map, HashSet::new(), 30, false)
+}
+
+fn part_two(filepath: &str) -> i32 {
+    let valve_map = create_valves(filepath);
+    println!("{:#?}", valve_map);
+    traverse_pair("AA", "AA", 0, 0, &valve_map, HashSet::new(), 26)
 }
 
 fn traverse(
@@ -52,6 +60,111 @@ fn traverse(
             ));
         }
         index += 1
+    }
+    max
+}
+
+fn traverse_pair(
+    me_value: &str,
+    elephant_value: &str,
+    me_state: i32,
+    elephant_state: i32,
+    valve_map: &HashMap<String, Valve>,
+    visited: HashSet<String>,
+    time_left: i32,
+) -> i32 {
+    if time_left <= 0 {
+        return 0;
+    }
+    let mut max = 0;
+    //first handle me
+    if me_state == 0 {
+        let valve = valve_map.get(me_value).unwrap();
+        if valve.flow_rate > 0 && !visited.contains(me_value) {
+            let mut visited = visited.clone();
+            visited.insert(me_value.to_string());
+            let result = traverse_pair(
+                me_value,
+                elephant_value,
+                1,
+                elephant_state,
+                valve_map,
+                visited,
+                time_left,
+            );
+            max = max.max(result);
+        }
+        let mut index = 0;
+        let mut visited = visited.clone();
+        visited.insert(me_value.to_string());
+        while index < valve.neighbours.len() {
+            let neighbour_name = valve.neighbours.get(index).unwrap();
+            let neighbour_distance = valve.distances.get(index).unwrap();
+            if !visited.contains(neighbour_name) {
+                let result = traverse_pair(
+                    me_value,
+                    elephant_value,
+                    *neighbour_distance,
+                    elephant_state,
+                    valve_map,
+                    visited.clone(),
+                    time_left,
+                );
+                max = max.max(result);
+            }
+            index += 1
+        }
+    } else if elephant_state == 0 {
+        let valve = valve_map.get(elephant_value).unwrap();
+        if valve.flow_rate > 0 && !visited.contains(elephant_value) {
+            let mut visited = visited.clone();
+            visited.insert(elephant_value.to_string());
+            let result = traverse_pair(
+                me_value,
+                elephant_value,
+                me_state,
+                1,
+                valve_map,
+                visited,
+                time_left,
+            );
+            max = max.max(result);
+        }
+        let mut index = 0;
+        let mut visited = visited.clone();
+        visited.insert(elephant_value.to_string());
+        while index < valve.neighbours.len() {
+            let neighbour_name = valve.neighbours.get(index).unwrap();
+            let neighbour_distance = valve.distances.get(index).unwrap();
+            if !visited.contains(neighbour_name) {
+                let result = traverse_pair(
+                    me_value,
+                    elephant_value,
+                    me_state,
+                    *neighbour_distance,
+                    valve_map,
+                    visited.clone(),
+                    time_left,
+                );
+                max = max.max(result);
+            }
+            index += 1
+        }
+    } else {
+        let value: i32 = visited
+            .iter()
+            .map(|key| valve_map.get(key).unwrap().flow_rate)
+            .sum();
+        return value
+            + traverse_pair(
+                me_value,
+                elephant_value,
+                me_state - 1,
+                elephant_state - 1,
+                valve_map,
+                visited,
+                time_left - 1,
+            );
     }
     max
 }
