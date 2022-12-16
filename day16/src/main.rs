@@ -6,7 +6,7 @@ fn main() {
     // println!("part_one: {}", part_one("input2.txt"));
     // println!("part_one: {}", part_one("input1.txt"));
     println!("part_two: {}", part_two("input2.txt"));
-    println!("part_two: {}", part_two("input1.txt"));
+    // println!("part_two: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> i32 {
@@ -18,7 +18,48 @@ fn part_one(filepath: &str) -> i32 {
 fn part_two(filepath: &str) -> i32 {
     let valve_map = create_valves(filepath);
     println!("{:#?}", valve_map);
-    traverse_pair("AA", "AA", 0, 0, &valve_map, HashSet::new(), 26)
+    let first = valve_map.get("AA").unwrap();
+    let best_action = best_action("AA", &valve_map, "", 30, false);
+    println!("{:?}", best_action);
+    // traverse_pair("AA", "AA", 0, 0, &valve_map, HashSet::new(), 26)
+    0
+}
+
+fn best_action(
+    position: &str,
+    valve_map: &HashMap<String, Valve>,
+    previous: &str,
+    time_left: i32,
+    self_triggered: bool,
+) -> (String, i32) {
+    if time_left == 0 {
+        ("".to_string(), 0)
+    } else {
+        let valve = valve_map.get(position).unwrap();
+        let mut best_action_tuple = ("".to_string(), i32::MIN);
+        if valve.flow_rate > 0 && !self_triggered {
+            let result = best_action(position, valve_map, previous, time_left - 1, true);
+            let self_open = (
+                position.to_string(),
+                valve.flow_rate * (time_left - 1) + result.1,
+            );
+            if self_open.1 > best_action_tuple.1 {
+                best_action_tuple = self_open
+            }
+        }
+
+        for name in valve
+            .neighbours
+            .iter()
+            .filter(|name| name.as_str() != previous)
+        {
+            let result = best_action(name, valve_map, position, time_left - 1, false);
+            if result.1 > best_action_tuple.1 {
+                best_action_tuple = result;
+            }
+        }
+        best_action_tuple
+    }
 }
 
 fn traverse(
@@ -46,8 +87,8 @@ fn traverse(
     }
     let mut index = 0;
     visited.insert(current_valve.to_string());
-    while index < valve.neighbours.len() {
-        let neighbour_name = valve.neighbours.get(index).unwrap();
+    while index < valve.accessible_nodes.len() {
+        let neighbour_name = valve.accessible_nodes.get(index).unwrap();
         let neighbour_distance = valve.distances.get(index).unwrap();
         let time_left_after_move = time_left - neighbour_distance;
         if !visited.contains(neighbour_name) && time_left_after_move >= 0 {
@@ -97,8 +138,8 @@ fn traverse_pair(
         let mut index = 0;
         let mut visited = visited.clone();
         visited.insert(me_value.to_string());
-        while index < valve.neighbours.len() {
-            let neighbour_name = valve.neighbours.get(index).unwrap();
+        while index < valve.accessible_nodes.len() {
+            let neighbour_name = valve.accessible_nodes.get(index).unwrap();
             let neighbour_distance = valve.distances.get(index).unwrap();
             if !visited.contains(neighbour_name) {
                 let result = traverse_pair(
@@ -133,8 +174,8 @@ fn traverse_pair(
         let mut index = 0;
         let mut visited = visited.clone();
         visited.insert(elephant_value.to_string());
-        while index < valve.neighbours.len() {
-            let neighbour_name = valve.neighbours.get(index).unwrap();
+        while index < valve.accessible_nodes.len() {
+            let neighbour_name = valve.accessible_nodes.get(index).unwrap();
             let neighbour_distance = valve.distances.get(index).unwrap();
             if !visited.contains(neighbour_name) {
                 let result = traverse_pair(
@@ -193,7 +234,8 @@ fn create_valves(filepath: &str) -> HashMap<String, Valve> {
     for (valve_name, neighbour_names) in valve_to_neighbour_map {
         let valve = valve_map.get_mut(valve_name.as_str()).unwrap();
         for neighbour_name in neighbour_names {
-            valve.neighbours.push(neighbour_name);
+            valve.neighbours.push(neighbour_name.to_string());
+            valve.accessible_nodes.push(neighbour_name);
             valve.distances.push(1)
         }
     }
@@ -203,11 +245,17 @@ fn create_valves(filepath: &str) -> HashMap<String, Valve> {
         .collect();
     for valve_name in valve_names {
         let mut index = 0;
-        while index < valve_map.get(valve_name.as_str()).unwrap().neighbours.len() {
+        while index
+            < valve_map
+                .get(valve_name.as_str())
+                .unwrap()
+                .accessible_nodes
+                .len()
+        {
             let other_valve_name = valve_map
                 .get(valve_name.as_str())
                 .unwrap()
-                .neighbours
+                .accessible_nodes
                 .get(index)
                 .unwrap()
                 .to_string();
@@ -219,7 +267,7 @@ fn create_valves(filepath: &str) -> HashMap<String, Valve> {
                 .unwrap();
             let other_valve = valve_map.get(other_valve_name.as_str()).unwrap();
             let other_valve_distances = other_valve.distances.clone();
-            let other_valve_neighbours = other_valve.neighbours.clone();
+            let other_valve_neighbours = other_valve.accessible_nodes.clone();
             let mut other_index = 0;
             while other_index < other_valve_distances.len() {
                 let other_valve_distance = *other_valve_distances.get(other_index).unwrap();
@@ -230,12 +278,14 @@ fn create_valves(filepath: &str) -> HashMap<String, Valve> {
                     && !valve_map
                         .get(valve_name.as_str())
                         .unwrap()
-                        .neighbours
+                        .accessible_nodes
                         .contains(&other_valve_neighbour)
                 {
                     let valve = valve_map.get_mut(valve_name.as_str()).unwrap();
                     valve.distances.push(distance + 1);
-                    valve.neighbours.push(other_valve_neighbour.to_string());
+                    valve
+                        .accessible_nodes
+                        .push(other_valve_neighbour.to_string());
                 }
                 other_index += 1;
             }
@@ -250,9 +300,9 @@ fn create_valves(filepath: &str) -> HashMap<String, Valve> {
         .collect();
     for valve in valve_map.values_mut() {
         for useless in &useless_valves {
-            let pos = valve.neighbours.iter().position(|x| x == useless);
+            let pos = valve.accessible_nodes.iter().position(|x| x == useless);
             if let Some(pos) = pos {
-                valve.neighbours.remove(pos);
+                valve.accessible_nodes.remove(pos);
                 valve.distances.remove(pos);
             }
         }
@@ -265,6 +315,7 @@ struct Valve {
     name: String,
     flow_rate: i32,
     neighbours: Vec<String>,
+    accessible_nodes: Vec<String>,
     distances: Vec<i32>,
 }
 
@@ -274,6 +325,7 @@ impl Valve {
             name,
             flow_rate,
             neighbours: Vec::new(),
+            accessible_nodes: Vec::new(),
             distances: Vec::new(),
         }
     }
