@@ -1,6 +1,7 @@
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::io::Read;
+use std::thread;
 
 fn main() {
     // println!("part_one: {}", part_one("input2.txt"));
@@ -18,8 +19,47 @@ fn part_one(filepath: &str) -> i32 {
 fn part_two(filepath: &str) -> i32 {
     let valve_map = create_valves(filepath);
     println!("{:#?}", valve_map);
-    let target = valve_map.get("AA").unwrap().accessible_nodes.len();
-    traverse_pair("AA", "AA", 0, 0, &valve_map, HashSet::new(), 26, target)
+    let target = valve_map.get("AA").unwrap().accessible_nodes.len() + 1;
+    // traverse_pair("AA", "AA", 0, 0, &valve_map, HashSet::new(), 26, target)
+    traverse_pair_speedy(valve_map, 26)
+}
+
+fn traverse_pair_speedy(valve_map: HashMap<String, Valve>, time_left: i32) -> i32 {
+    //speed up the process by using threads and halving the search space
+    let start = valve_map.get("AA").unwrap().to_owned();
+    let accessible_nodes = start.accessible_nodes;
+    let distances = &start.distances;
+    let length = accessible_nodes.len();
+    let target = length;
+    let mut threads = Vec::new();
+    for first in 0..length {
+        let me_value = accessible_nodes.get(first).unwrap().to_owned();
+        let me_state = *distances.get(first).unwrap() + 1;
+        for second in first + 1..length {
+            let me_value = me_value.to_string();
+            let elephant_value = accessible_nodes.get(second).unwrap().to_owned();
+            let elephant_state = *distances.get(second).unwrap() + 1;
+            let valve_map = valve_map.clone();
+            let thread_join_handle = thread::spawn(move || {
+                traverse_pair(
+                    me_value.as_str(),
+                    elephant_value.as_str(),
+                    me_state,
+                    elephant_state,
+                    &valve_map,
+                    HashSet::new(),
+                    time_left,
+                    target,
+                )
+            });
+            threads.push(thread_join_handle);
+        }
+    }
+    let mut max = 0;
+    for thread in threads {
+        max = max.max(thread.join().unwrap())
+    }
+    max
 }
 
 fn traverse(
@@ -265,7 +305,7 @@ fn create_valves(filepath: &str) -> HashMap<String, Valve> {
     valve_map
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Valve {
     name: String,
     flow_rate: i32,
