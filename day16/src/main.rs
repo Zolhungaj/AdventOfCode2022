@@ -4,9 +4,9 @@ use std::io::Read;
 use std::thread;
 
 fn main() {
-    // println!("part_one: {}", part_one("input2.txt"));
-    // println!("part_one: {}", part_one("input1.txt"));
-    // println!("part_two: {}", part_two("input2.txt"));
+    println!("part_one: {}", part_one("input2.txt"));
+    println!("part_one: {}", part_one("input1.txt"));
+    println!("part_two: {}", part_two("input2.txt"));
     println!("part_two: {}", part_two("input1.txt"));
 }
 
