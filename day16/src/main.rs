@@ -1,20 +1,62 @@
 use regex::Regex;
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
 use std::io::Read;
-use std::vec;
 
 fn main() {
     println!("part_one: {}", part_one("input2.txt"));
-    // println!("part_one: {}", part_one("input1.txt"));
+    println!("part_one: {}", part_one("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> i32 {
     let valve_map = create_valves(filepath);
     println!("{:#?}", valve_map);
-    0
+    traverse("AA", &valve_map, HashSet::new(), 30, false)
 }
 
-fn create_valves<'a>(filepath: &str) -> HashMap<String, Valve> {
+fn traverse(
+    current_valve: &str,
+    valve_map: &HashMap<String, Valve>,
+    mut visited: HashSet<String>,
+    time_left: i32,
+    is_self: bool,
+) -> i32 {
+    if time_left <= 0 {
+        return 0;
+    }
+    let valve = valve_map.get(current_valve).unwrap();
+    let mut max = 0;
+    if !is_self && valve.flow_rate > 0 {
+        let score = valve.flow_rate * (time_left - 1)
+            + traverse(
+                current_valve,
+                valve_map,
+                visited.clone(),
+                time_left - 1,
+                true,
+            );
+        max = max.max(score)
+    }
+    let mut index = 0;
+    visited.insert(current_valve.to_string());
+    while index < valve.neighbours.len() {
+        let neighbour_name = valve.neighbours.get(index).unwrap();
+        let neighbour_distance = valve.distances.get(index).unwrap();
+        let time_left_after_move = time_left - neighbour_distance;
+        if !visited.contains(neighbour_name) && time_left_after_move >= 0 {
+            max = max.max(traverse(
+                neighbour_name,
+                valve_map,
+                visited.clone(),
+                time_left_after_move,
+                false,
+            ));
+        }
+        index += 1
+    }
+    max
+}
+
+fn create_valves(filepath: &str) -> HashMap<String, Valve> {
     let content = get_content(filepath.to_string());
     let regex = Regex::new(r"Valve (?P<valve_name>\w+) has flow rate=(?P<flow_rate>\d+); tunnels? leads? to valves? (?P<tunnels>.*)").unwrap();
     let tunnel_regex = Regex::new(r"\w+").unwrap();
@@ -29,32 +71,76 @@ fn create_valves<'a>(filepath: &str) -> HashMap<String, Valve> {
             if let Some(vec) = valve_to_neighbour_map.get_mut(name) {
                 vec.push(other_name.to_string());
             } else {
-                let mut vec = Vec::new();
-                vec.push(name.to_string());
+                let vec = vec![other_name.to_string()];
                 valve_to_neighbour_map.insert(name.to_string(), vec);
             }
         }
         valve_map.insert(name.to_string(), valve);
     }
     for (valve_name, neighbour_names) in valve_to_neighbour_map {
+        let valve = valve_map.get_mut(valve_name.as_str()).unwrap();
         for neighbour_name in neighbour_names {
-            let neighbour = valve_map.get(neighbour_name.as_str()).unwrap();
-            let valve = valve_map.get_mut(valve_name.as_str()).unwrap();
-            valve.neighbours.push(neighbour);
+            valve.neighbours.push(neighbour_name);
             valve.distances.push(1)
         }
     }
-    for valve in valve_map.values_mut() {
+    let valve_names: Vec<String> = valve_map
+        .values()
+        .map(|valve| valve.name.to_string())
+        .collect();
+    for valve_name in valve_names {
         let mut index = 0;
-        while index <= valve.neighbours.len() {
-            let other_valve = valve.neighbours.get(index).unwrap();
-            let distance = valve.distances.get(index).unwrap();
-            let other_index = 0;
-            while other_index < other_valve.distances.len() {
-                let other_valve_distance = other_valve.distances.get(other_index).unwrap();
-                let other_valve_neighbour = other_valve.neighbours.get(other_index).unwrap();
-                if *other_valve_distance == 1 && !valve.neighbours.contains(other_valve_neighbour) {
+        while index < valve_map.get(valve_name.as_str()).unwrap().neighbours.len() {
+            let other_valve_name = valve_map
+                .get(valve_name.as_str())
+                .unwrap()
+                .neighbours
+                .get(index)
+                .unwrap()
+                .to_string();
+            let distance = *valve_map
+                .get(valve_name.as_str())
+                .unwrap()
+                .distances
+                .get(index)
+                .unwrap();
+            let other_valve = valve_map.get(other_valve_name.as_str()).unwrap();
+            let other_valve_distances = other_valve.distances.clone();
+            let other_valve_neighbours = other_valve.neighbours.clone();
+            let mut other_index = 0;
+            while other_index < other_valve_distances.len() {
+                let other_valve_distance = *other_valve_distances.get(other_index).unwrap();
+                let other_valve_neighbour =
+                    other_valve_neighbours.get(other_index).unwrap().to_string();
+                if valve_name != other_valve_neighbour
+                    && other_valve_distance == 1
+                    && !valve_map
+                        .get(valve_name.as_str())
+                        .unwrap()
+                        .neighbours
+                        .contains(&other_valve_neighbour)
+                {
+                    let valve = valve_map.get_mut(valve_name.as_str()).unwrap();
+                    valve.distances.push(distance + 1);
+                    valve.neighbours.push(other_valve_neighbour.to_string());
                 }
+                other_index += 1;
+            }
+            index += 1;
+        }
+    }
+    //optimization to remove visiting of flowless nodes
+    let useless_valves: Vec<String> = valve_map
+        .values()
+        .filter(|valve| valve.flow_rate == 0)
+        .map(|valve| valve.name.to_string())
+        .collect();
+    for valve in valve_map.values_mut() {
+        for useless in &useless_valves {
+            let pos = valve.neighbours.iter().position(|x| x == useless);
+            if let Some(pos) = pos {
+                valve.neighbours.remove(pos);
+                valve.distances.remove(pos);
             }
         }
     }
@@ -62,14 +148,14 @@ fn create_valves<'a>(filepath: &str) -> HashMap<String, Valve> {
 }
 
 #[derive(Debug)]
-struct Valve<'a> {
+struct Valve {
     name: String,
     flow_rate: i32,
-    neighbours: Vec<&'a Valve<'a>>,
+    neighbours: Vec<String>,
     distances: Vec<i32>,
 }
 
-impl<'a> Valve<'a> {
+impl Valve {
     fn new(name: String, flow_rate: i32) -> Self {
         Valve {
             name,
@@ -80,7 +166,7 @@ impl<'a> Valve<'a> {
     }
 }
 
-impl<'a> PartialEq for Valve<'a> {
+impl PartialEq for Valve {
     fn eq(&self, other: &Self) -> bool {
         self.name == other.name
     }
