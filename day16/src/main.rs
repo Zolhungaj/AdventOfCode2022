@@ -18,48 +18,8 @@ fn part_one(filepath: &str) -> i32 {
 fn part_two(filepath: &str) -> i32 {
     let valve_map = create_valves(filepath);
     println!("{:#?}", valve_map);
-    let first = valve_map.get("AA").unwrap();
-    let best_action = best_action("AA", &valve_map, "", 30, false);
-    println!("{:?}", best_action);
-    // traverse_pair("AA", "AA", 0, 0, &valve_map, HashSet::new(), 26)
-    0
-}
-
-fn best_action(
-    position: &str,
-    valve_map: &HashMap<String, Valve>,
-    previous: &str,
-    time_left: i32,
-    self_triggered: bool,
-) -> (String, i32) {
-    if time_left == 0 {
-        ("".to_string(), 0)
-    } else {
-        let valve = valve_map.get(position).unwrap();
-        let mut best_action_tuple = ("".to_string(), i32::MIN);
-        if valve.flow_rate > 0 && !self_triggered {
-            let result = best_action(position, valve_map, previous, time_left - 1, true);
-            let self_open = (
-                position.to_string(),
-                valve.flow_rate * (time_left - 1) + result.1,
-            );
-            if self_open.1 > best_action_tuple.1 {
-                best_action_tuple = self_open
-            }
-        }
-
-        for name in valve
-            .neighbours
-            .iter()
-            .filter(|name| name.as_str() != previous)
-        {
-            let result = best_action(name, valve_map, position, time_left - 1, false);
-            if result.1 > best_action_tuple.1 {
-                best_action_tuple = result;
-            }
-        }
-        best_action_tuple
-    }
+    let target = valve_map.get("AA").unwrap().accessible_nodes.len();
+    traverse_pair("AA", "AA", 0, 0, &valve_map, HashSet::new(), 26, target)
 }
 
 fn traverse(
@@ -111,73 +71,102 @@ fn traverse_pair(
     me_state: i32,
     elephant_state: i32,
     valve_map: &HashMap<String, Valve>,
-    visited: HashSet<String>,
+    mut visited: HashSet<String>,
     time_left: i32,
+    target: usize,
 ) -> i32 {
+    let mut do_not_visit = visited.clone();
+    do_not_visit.insert(me_value.to_string());
+    do_not_visit.insert(elephant_value.to_string());
     if time_left <= 0 {
-        return 0;
-    }
-    let mut max = 0;
-    //first handle me
-    if me_state == 0 {
+        0
+    } else if me_state == 0 {
+        if do_not_visit.len() == target {
+            return traverse_pair(
+                me_value,
+                elephant_value,
+                -1,
+                elephant_state,
+                valve_map,
+                visited,
+                time_left,
+                target,
+            ); //disable me since nothing more can be done
+        }
+        visited.insert(me_value.to_string());
+        let mut max = 0;
         let valve = valve_map.get(me_value).unwrap();
-        if valve.flow_rate > 0 && !visited.contains(me_value) {
-            let mut visited = visited.clone();
-            visited.insert(me_value.to_string());
+        if valve.flow_rate > 0 {
             let result = traverse_pair(
                 me_value,
                 elephant_value,
                 1,
                 elephant_state,
                 valve_map,
-                visited,
+                visited.clone(),
                 time_left,
+                target,
             );
             max = max.max(result);
         }
         let mut index = 0;
-        let mut visited = visited.clone();
-        visited.insert(me_value.to_string());
         while index < valve.accessible_nodes.len() {
             let neighbour_name = valve.accessible_nodes.get(index).unwrap();
             let neighbour_distance = valve.distances.get(index).unwrap();
-            if !visited.contains(neighbour_name) {
+            if !do_not_visit.contains(neighbour_name) {
+                let mut visited = visited.clone();
+                visited.insert(neighbour_name.to_string());
                 let result = traverse_pair(
                     me_value,
                     elephant_value,
                     *neighbour_distance,
                     elephant_state,
                     valve_map,
-                    visited.clone(),
+                    visited,
                     time_left,
+                    target,
                 );
                 max = max.max(result);
             }
             index += 1
         }
+        max
     } else if elephant_state == 0 {
+        if do_not_visit.len() == target {
+            return traverse_pair(
+                me_value,
+                elephant_value,
+                me_state,
+                -1,
+                valve_map,
+                visited,
+                time_left,
+                target,
+            ); //disable elephant since nothing more can be done
+        }
+        visited.insert(elephant_value.to_string());
+        let mut max = 0;
         let valve = valve_map.get(elephant_value).unwrap();
-        if valve.flow_rate > 0 && !visited.contains(elephant_value) {
-            let mut visited = visited.clone();
-            visited.insert(elephant_value.to_string());
+        if valve.flow_rate > 0 {
             let result = traverse_pair(
                 me_value,
                 elephant_value,
                 me_state,
                 1,
                 valve_map,
-                visited,
+                visited.clone(),
                 time_left,
+                target,
             );
             max = max.max(result);
         }
         let mut index = 0;
-        let mut visited = visited.clone();
-        visited.insert(elephant_value.to_string());
         while index < valve.accessible_nodes.len() {
             let neighbour_name = valve.accessible_nodes.get(index).unwrap();
             let neighbour_distance = valve.distances.get(index).unwrap();
             if !visited.contains(neighbour_name) {
+                let mut visited = visited.clone();
+                visited.insert(neighbour_name.to_string());
                 let result = traverse_pair(
                     me_value,
                     elephant_value,
@@ -186,17 +175,18 @@ fn traverse_pair(
                     valve_map,
                     visited.clone(),
                     time_left,
+                    target,
                 );
                 max = max.max(result);
             }
             index += 1
         }
+        max
     } else {
-        let value: i32 = visited
+        visited
             .iter()
             .map(|key| valve_map.get(key).unwrap().flow_rate)
-            .sum();
-        return value
+            .sum::<i32>()
             + traverse_pair(
                 me_value,
                 elephant_value,
@@ -205,9 +195,9 @@ fn traverse_pair(
                 valve_map,
                 visited,
                 time_left - 1,
-            );
+                target,
+            )
     }
-    max
 }
 
 fn create_valves(filepath: &str) -> HashMap<String, Valve> {
