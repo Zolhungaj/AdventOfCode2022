@@ -6,8 +6,8 @@ use std::thread;
 fn main() {
     // println!("part_one: {}", part_one("input2.txt"));
     // println!("part_one: {}", part_one("input1.txt"));
-    println!("part_two: {}", part_two("input2.txt"));
-    // println!("part_two: {}", part_two("input1.txt"));
+    // println!("part_two: {}", part_two("input2.txt"));
+    println!("part_two: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> i32 {
@@ -31,7 +31,7 @@ fn traverse_pair_speedy(valve_map: HashMap<String, Valve>, time_left: i32) -> i3
     let distances = &start.distances;
     let length = accessible_nodes.len();
     let target = length;
-    let mut threads = Vec::new();
+    let mut tasks = Vec::new();
     for first in 0..length {
         let me_value = accessible_nodes.get(first).unwrap().to_owned();
         let me_state = *distances.get(first).unwrap() + 1;
@@ -40,7 +40,7 @@ fn traverse_pair_speedy(valve_map: HashMap<String, Valve>, time_left: i32) -> i3
             let elephant_value = accessible_nodes.get(second).unwrap().to_owned();
             let elephant_state = *distances.get(second).unwrap() + 1;
             let valve_map = valve_map.clone();
-            let thread_join_handle = thread::spawn(move || {
+            let task = move || {
                 traverse_pair(
                     me_value.as_str(),
                     elephant_value.as_str(),
@@ -51,10 +51,34 @@ fn traverse_pair_speedy(valve_map: HashMap<String, Valve>, time_left: i32) -> i3
                     time_left,
                     target,
                 )
-            });
-            threads.push(thread_join_handle);
+            };
+            tasks.push(task);
         }
     }
+    let thread_count = 15;
+    let mut threads = Vec::new();
+    let mut task_chunks = Vec::new();
+    for chunk in tasks.chunks(tasks.len() / thread_count) {
+        let mut new_chunk = Vec::new();
+        for x in chunk {
+            new_chunk.push(x.to_owned());
+        }
+        task_chunks.push(new_chunk);
+    }
+
+    for chunk in task_chunks {
+        let thread = thread::spawn(move || {
+            let mut max = 0;
+            for task in chunk {
+                let task = task.to_owned();
+                max = max.max(task())
+            }
+            max
+        });
+        threads.push(thread);
+        println!("1");
+    }
+
     let mut max = 0;
     for thread in threads {
         max = max.max(thread.join().unwrap())
