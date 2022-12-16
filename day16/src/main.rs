@@ -71,7 +71,7 @@ fn traverse_pair(
     me_state: i32,
     elephant_state: i32,
     valve_map: &HashMap<String, Valve>,
-    mut visited: HashSet<String>,
+    visited: HashSet<String>,
     time_left: i32,
     target: usize,
 ) -> i32 {
@@ -81,7 +81,9 @@ fn traverse_pair(
     if time_left <= 0 {
         0
     } else if me_state == 0 {
-        if do_not_visit.len() == target {
+        let mut visited = visited.clone();
+        visited.insert(me_value.to_string());
+        if do_not_visit.len() >= target {
             return traverse_pair(
                 me_value,
                 elephant_value,
@@ -93,36 +95,20 @@ fn traverse_pair(
                 target,
             ); //disable me since nothing more can be done
         }
-        visited.insert(me_value.to_string());
         let mut max = 0;
         let valve = valve_map.get(me_value).unwrap();
-        if valve.flow_rate > 0 {
-            let result = traverse_pair(
-                me_value,
-                elephant_value,
-                1,
-                elephant_state,
-                valve_map,
-                visited.clone(),
-                time_left,
-                target,
-            );
-            max = max.max(result);
-        }
         let mut index = 0;
         while index < valve.accessible_nodes.len() {
             let neighbour_name = valve.accessible_nodes.get(index).unwrap();
             let neighbour_distance = valve.distances.get(index).unwrap();
             if !do_not_visit.contains(neighbour_name) {
-                let mut visited = visited.clone();
-                visited.insert(neighbour_name.to_string());
                 let result = traverse_pair(
-                    me_value,
+                    neighbour_name,
                     elephant_value,
-                    *neighbour_distance,
+                    *neighbour_distance + 1, //once we arrive we turn on the power
                     elephant_state,
                     valve_map,
-                    visited,
+                    visited.clone(),
                     time_left,
                     target,
                 );
@@ -132,46 +118,25 @@ fn traverse_pair(
         }
         max
     } else if elephant_state == 0 {
-        if do_not_visit.len() == target {
+        let mut visited = visited.clone();
+        visited.insert(elephant_value.to_string());
+        if do_not_visit.len() >= target {
             return traverse_pair(
-                me_value,
-                elephant_value,
-                me_state,
-                -1,
-                valve_map,
-                visited,
-                time_left,
-                target,
+                me_value, "", me_state, -1, valve_map, visited, time_left, target,
             ); //disable elephant since nothing more can be done
         }
-        visited.insert(elephant_value.to_string());
         let mut max = 0;
         let valve = valve_map.get(elephant_value).unwrap();
-        if valve.flow_rate > 0 {
-            let result = traverse_pair(
-                me_value,
-                elephant_value,
-                me_state,
-                1,
-                valve_map,
-                visited.clone(),
-                time_left,
-                target,
-            );
-            max = max.max(result);
-        }
         let mut index = 0;
         while index < valve.accessible_nodes.len() {
             let neighbour_name = valve.accessible_nodes.get(index).unwrap();
             let neighbour_distance = valve.distances.get(index).unwrap();
-            if !visited.contains(neighbour_name) {
-                let mut visited = visited.clone();
-                visited.insert(neighbour_name.to_string());
+            if !do_not_visit.contains(neighbour_name) {
                 let result = traverse_pair(
                     me_value,
-                    elephant_value,
+                    neighbour_name,
                     me_state,
-                    *neighbour_distance,
+                    *neighbour_distance + 1, //once we arrive we turn on the power
                     valve_map,
                     visited.clone(),
                     time_left,
