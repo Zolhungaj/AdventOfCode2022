@@ -4,7 +4,7 @@ use std::io::Read;
 
 fn main() {
     println!("part_one: {}", part_one("input2.txt"));
-    // println!("part_one: {}", part_one("input1.txt"));
+    println!("part_one: {}", part_one("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> usize {
@@ -16,8 +16,7 @@ fn part_one(filepath: &str) -> usize {
     let width = 7;
     let floor = vec![Tile::Dead; width];
     shaft.push_front(floor);
-    let mut top = 0;
-    for rock in RockGenerator::new(2020) {
+    for rock in RockGenerator::new(2022) {
         for _ in 0..3 {
             shaft.push_front(vec![Tile::Empty; width]); //three empty rows before next rock
         }
@@ -67,8 +66,8 @@ fn part_one(filepath: &str) -> usize {
                 shaft.push_front(vec![
                     Tile::Empty,
                     Tile::Empty,
-                    Tile::Empty,
-                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Live,
                     Tile::Live,
                     Tile::Empty,
                     Tile::Empty,
@@ -85,8 +84,8 @@ fn part_one(filepath: &str) -> usize {
                 shaft.push_front(vec![
                     Tile::Empty,
                     Tile::Empty,
-                    Tile::Live,
-                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
                     Tile::Live,
                     Tile::Empty,
                     Tile::Empty,
@@ -157,20 +156,20 @@ fn part_one(filepath: &str) -> usize {
             (2, 0),
             match rock {
                 Rock::Flat => (5, 0),
-                Rock::Cross | Rock::Angle => (5, 2),
+                Rock::Cross | Rock::Angle => (4, 2),
                 Rock::Long => (2, 3),
                 Rock::Square => (3, 1),
             },
         );
         loop {
-            for line in &shaft {
-                for tile in line {
-                    print!("{}", tile);
-                }
-                println!();
-            }
+            // for line in &shaft {
+            //     for tile in line {
+            //         print!("{}", tile);
+            //     }
+            //     println!();
+            // }
             let direction = jet_generator.next();
-            println!("{:?}", direction);
+            // println!("{:?}", direction);
             match direction {
                 Direction::Left => {
                     if bounding_box.0 .0 != 0 {
@@ -239,9 +238,77 @@ fn part_one(filepath: &str) -> usize {
                     }
                 }
             };
+            let mut can_move = true;
+            for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                for y in bounding_box.0 .1..=bounding_box.1 .1 {
+                    let tile = shaft.get(y).unwrap().get(x).unwrap();
+                    let other_tile = shaft.get(y + 1).unwrap().get(x).unwrap();
+                    if *tile == Tile::Live && *other_tile == Tile::Dead {
+                        can_move = false;
+                    }
+                }
+            }
+            // for line in &shaft {
+            //     for tile in line {
+            //         print!("{}", tile);
+            //     }
+            //     println!();
+            // }
+            if can_move {
+                for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                    for y in (bounding_box.0 .1..=bounding_box.1 .1).rev() {
+                        let tile = shaft.get_mut(y).unwrap().get_mut(x).unwrap();
+                        if *tile == Tile::Live {
+                            *tile = Tile::Empty;
+                            let tile = shaft.get_mut(y + 1).unwrap().get_mut(x).unwrap();
+                            *tile = Tile::Live;
+                        }
+                    }
+                }
+                bounding_box = (
+                    (bounding_box.0 .0, bounding_box.0 .1 + 1),
+                    (bounding_box.1 .0, bounding_box.1 .1 + 1),
+                );
+            } else {
+                for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                    for y in bounding_box.0 .1..=bounding_box.1 .1 {
+                        let tile = shaft.get_mut(y).unwrap().get_mut(x).unwrap();
+                        if *tile == Tile::Live {
+                            *tile = Tile::Dead;
+                        }
+                    }
+                }
+                break;
+            }
+            // for line in &shaft {
+            //     for tile in line {
+            //         print!("{}", tile);
+            //     }
+            //     println!();
+            // }
         }
+        'outer: loop {
+            shaft.pop_front();
+            for x in shaft.get(0).unwrap() {
+                if *x == Tile::Dead {
+                    break 'outer;
+                }
+            }
+        }
+        // for line in &shaft {
+        //     for tile in line {
+        //         print!("{}", tile);
+        //     }
+        //     println!();
+        // }
     }
-    0
+    for line in &shaft {
+        for tile in line {
+            print!("{}", tile);
+        }
+        println!();
+    }
+    shaft.len() - 1
 }
 
 fn get_jet_generator(filepath: &str) -> JetGenerator {
@@ -342,6 +409,7 @@ impl Iterator for RockGenerator {
                 Rock::Long => Rock::Square,
                 Rock::Square => Rock::Flat,
             };
+            self.count += 1;
             current
         }
     }
