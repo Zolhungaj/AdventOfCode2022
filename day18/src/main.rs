@@ -2,10 +2,10 @@ use std::collections::HashSet;
 use std::io::Read;
 
 fn main() {
-    println!("part_one: {}", part_one("input2.txt"));
-    println!("part_one: {}", part_one("input1.txt"));
-    // println!("part_two: {}", part_two("input2.txt"));
-    // println!("part_two: {}", part_two("input1.txt"));
+    // println!("part_one: {}", part_one("input2.txt"));
+    // println!("part_one: {}", part_one("input1.txt"));
+    println!("part_two: {}", part_two("input2.txt"));
+    println!("part_two: {}", part_two("input1.txt"));
 }
 
 fn part_one(filepath: &str) -> i32 {
@@ -27,6 +27,82 @@ fn part_one(filepath: &str) -> i32 {
                 cube.2 + direction.2,
             );
             if !cubes.contains(&other_cube) {
+                count += 1;
+            }
+        }
+    }
+    count
+}
+
+fn part_two(filepath: &str) -> i32 {
+    let cubes = extract_content(filepath);
+    let mut count = 0;
+    let directions = vec![
+        (-1, 0, 0),
+        (1, 0, 0),
+        (0, -1, 0),
+        (0, 1, 0),
+        (0, 0, -1),
+        (0, 0, 1),
+    ];
+    let mut max_x = i32::MIN;
+    let mut max_y = i32::MIN;
+    let mut max_z = i32::MIN;
+    let mut min_x = i32::MAX;
+    let mut min_y = i32::MAX;
+    let mut min_z = i32::MAX;
+
+    //create a cube that completely encompasses the droplet
+    for cube in &cubes {
+        max_x = max_x.max(cube.0 + 1);
+        min_x = min_x.min(cube.0 - 1);
+        max_y = max_y.max(cube.1 + 1);
+        min_y = min_y.min(cube.1 - 1);
+        max_z = max_z.max(cube.2 + 1);
+        min_z = min_z.min(cube.2 - 1);
+    }
+
+    let mut steam = HashSet::new();
+    let mut next = HashSet::new();
+    let seed = (min_x, min_y, min_z);
+    next.insert(seed);
+    steam.insert(seed);
+
+    while !next.is_empty() {
+        let mut next_next = HashSet::new();
+        for cube in next.drain() {
+            for direction in &directions {
+                let other_cube = (
+                    cube.0 + direction.0,
+                    cube.1 + direction.1,
+                    cube.2 + direction.2,
+                );
+                if other_cube.0 <= max_x
+                    && other_cube.0 >= min_x
+                    && other_cube.1 <= max_y
+                    && other_cube.1 >= min_y
+                    && other_cube.2 <= max_z
+                    && other_cube.2 >= min_z
+                    && !steam.contains(&other_cube)
+                    && !cubes.contains(&other_cube)
+                {
+                    steam.insert(other_cube);
+                    next_next.insert(other_cube);
+                }
+            }
+        }
+        for cube in next_next {
+            next.insert(cube);
+        }
+    }
+    for cube in cubes {
+        for direction in &directions {
+            let other_cube = (
+                cube.0 + direction.0,
+                cube.1 + direction.1,
+                cube.2 + direction.2,
+            );
+            if steam.contains(&other_cube) {
                 count += 1;
             }
         }
