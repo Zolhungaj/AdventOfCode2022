@@ -5,7 +5,7 @@ use std::io::Read;
 fn main() {
     println!("part_one: {}", part_one("input2.txt"));
     // println!("part_one: {}", part_one("input1.txt"));
-    println!("part_two: {}", part_two("input2.txt"));
+    // println!("part_two: {}", part_two("input2.txt"));
     // println!("test: {}", test("input2.txt"));
     // println!("part_two: {}", part_two("input1.txt"));
 }
@@ -21,79 +21,18 @@ fn test(filepath: &str) -> usize {
 }
 
 fn part_one(filepath: &str) -> usize {
-    simulate_shaft(10000, get_jet_generator(filepath))
+    simulate_shaft(2022, get_jet_generator(filepath))
 }
 
 fn part_two(filepath: &str) -> usize {
     let jet_generator = get_jet_generator(filepath);
-    let jet_generator_length = jet_generator.length;
-    let rock_count = 5;
-    let common = 10000 * rock_count;
-    let target: usize = 1000000000000;
-    // println!("{},{}", jet_generator_length, common);
-    let mut results = Vec::new();
-    for size in 0..20 {
-        let first = simulate_shaft(common * size, jet_generator.clone());
-        results.push(first);
-        // println!("{}: {}", common * size, first);
-        for (idx, result1) in results.iter().enumerate() {
-            for x in idx + 1..results.len() {
-                let result2 = results.get(x).unwrap();
-                let distance = x - idx;
-                if (idx + distance * 2) < results.len() {
-                    let results3 = results.get(idx + distance * 2).unwrap();
-                    if results3 - result2 == result2 - result1 {
-                        //after reaching result1 with (idx * common) iterations
-                        //you can add result2-result1 to simulate (x-idx) * common * size iterations
-
-                        let base_iterations = idx * common; //base iterations is the amount of iterations to reach the beginning of the repetition
-                        let (base, floors, current_position) = simulate_shaft_with_floor(
-                            base_iterations,
-                            jet_generator.clone(),
-                            vec![vec![Tile::Dead; 7]],
-                        );
-                        // for line in &floors {
-                        //     for tile in line {
-                        //         print!("{}", tile);
-                        //     }
-                        //     println!();
-                        // }
-                        // println!();
-                        let base = base - 1;
-                        assert_eq!(base, *result1); //base is the height at the beginning of the repetition
-                        let diff = result2 - result1; //diff is the height of the repetition
-                        let diff_iterations = (x - idx) * common; //the amount of iterations to get the repetition
-                        let remaining_iterations = target - base_iterations; //remaining iterations we can simulate using diff
-                        let possible_to_skip = remaining_iterations / diff_iterations; //total amount we can actually skip
-                        let skipped = possible_to_skip * diff;
-                        let remaining_iterations2 =
-                            remaining_iterations - (possible_to_skip * diff_iterations); //remaining iterations that have to be simulated
-                        let floors_height = floors.len();
-                        let mut jet_generator = jet_generator;
-                        jet_generator.current_position = current_position;
-                        // println!("{:?}", jet_generator);
-                        let (excess, floors, _) = simulate_shaft_with_floor(
-                            remaining_iterations2,
-                            jet_generator.clone(),
-                            floors,
-                        );
-                        // for line in &floors {
-                        //     for tile in line {
-                        //         print!("{}", tile);
-                        //     }
-                        //     println!();
-                        // }
-                        println!("base:{},base_iterations:{},diff: {},diff_iterations:{},remaining_iterations:{},possible_to_skip:{},skipped:{},remaining_iterations2:{},excess:{}, floors_height: {}",base,base_iterations, diff, diff_iterations, remaining_iterations, possible_to_skip, skipped, remaining_iterations2,excess, floors_height);
-                        println!("!!¤!¤!{}", base + skipped + excess - floors_height);
-                        println!("!!!!!!!!!{}", result2 - result1);
-                        println!("!!!!!!{}", result1);
-                        return base + skipped + excess - floors_height;
-                    }
-                }
-            }
-        }
-    }
-    0
+    let target: usize = 2022;
+    let (height, iterations) = simulate_until_condition(jet_generator.clone());
+    let possible_to_skip = target / iterations; //total amount we can actually skip
+    let skipped = possible_to_skip * height;
+    let remaining_iterations2 = target - (possible_to_skip * iterations); //remaining iterations that have to be simulated
+    let excess = simulate_shaft(remaining_iterations2, jet_generator.clone());
+    return skipped + excess;
 }
 
 fn simulate_shaft(target: usize, mut jet_generator: JetGenerator) -> usize {
@@ -380,12 +319,12 @@ fn simulate_shaft_with_floor(
             }
         }
     }
-    // for line in &shaft {
-    //     for tile in line {
-    //         print!("{}", tile);
-    //     }
-    //     println!();
-    // }
+    for line in &shaft {
+        for tile in line {
+            print!("{}", tile);
+        }
+        println!();
+    }
     let height = shaft.len();
     let mut floors = Vec::new();
     for _ in 0..20 {
@@ -395,6 +334,299 @@ fn simulate_shaft_with_floor(
     }
     // println!("{:#?}", jet_generator);
     (height, floors, jet_generator.current_position)
+}
+
+fn simulate_until_condition(mut jet_generator: JetGenerator) -> (usize, usize) {
+    let mut shaft = VecDeque::new();
+    let width = 7;
+    shaft.push_back(vec![Tile::Dead; 7]);
+    let mut count = 0;
+    for rock in RockGenerator::new(1000000) {
+        count += 1;
+        for _ in 0..3 {
+            shaft.push_front(vec![Tile::Empty; width]); //three empty rows before next rock
+        }
+        match rock {
+            //note that the order here is bottom to top
+            Rock::Flat => {
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Empty,
+                ]);
+            }
+            Rock::Cross => {
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+            }
+            Rock::Angle => {
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+            }
+            Rock::Long => {
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+            }
+            Rock::Square => {
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+                shaft.push_front(vec![
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Live,
+                    Tile::Live,
+                    Tile::Empty,
+                    Tile::Empty,
+                    Tile::Empty,
+                ]);
+            }
+        }
+        //bounding box: top left corner to bottom right corner, to save on space to check, x is to the right, y is down
+        //top left corner of bounding box always starts out at (2,0)
+        let mut bounding_box = (
+            (2, 0),
+            match rock {
+                Rock::Flat => (5, 0),
+                Rock::Cross | Rock::Angle => (4, 2),
+                Rock::Long => (2, 3),
+                Rock::Square => (3, 1),
+            },
+        );
+        loop {
+            let direction = jet_generator.next();
+            // println!("{:?}", direction);
+            match direction {
+                Direction::Left => {
+                    if bounding_box.0 .0 != 0 {
+                        //top left corner x amplitude
+                        let mut can_move = true;
+                        for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                            for y in bounding_box.0 .1..=bounding_box.1 .1 {
+                                let tile = shaft.get(y).unwrap().get(x).unwrap();
+                                let other_tile = shaft.get(y).unwrap().get(x - 1).unwrap();
+                                if *tile == Tile::Live && *other_tile == Tile::Dead {
+                                    can_move = false;
+                                }
+                            }
+                        }
+                        if can_move {
+                            //move all live tiles one to the left, starting from the left
+                            for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                                for y in bounding_box.0 .1..=bounding_box.1 .1 {
+                                    let tile = shaft.get_mut(y).unwrap().get_mut(x).unwrap();
+                                    if *tile == Tile::Live {
+                                        *tile = Tile::Empty;
+                                        let tile =
+                                            shaft.get_mut(y).unwrap().get_mut(x - 1).unwrap();
+                                        *tile = Tile::Live;
+                                    }
+                                }
+                            }
+                            bounding_box = (
+                                (bounding_box.0 .0 - 1, bounding_box.0 .1),
+                                (bounding_box.1 .0 - 1, bounding_box.1 .1),
+                            );
+                        }
+                    }
+                }
+                Direction::Right => {
+                    if bounding_box.1 .0 != width - 1 {
+                        //bottom right corner x amplitude
+                        let mut can_move = true;
+                        for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                            for y in bounding_box.0 .1..=bounding_box.1 .1 {
+                                let tile = shaft.get(y).unwrap().get(x).unwrap();
+                                let other_tile = shaft.get(y).unwrap().get(x + 1).unwrap();
+                                if *tile == Tile::Live && *other_tile == Tile::Dead {
+                                    can_move = false;
+                                }
+                            }
+                        }
+                        if can_move {
+                            //move all live tiles one to the right, starting from the right
+                            for x in (bounding_box.0 .0..=bounding_box.1 .0).rev() {
+                                for y in bounding_box.0 .1..=bounding_box.1 .1 {
+                                    let tile = shaft.get_mut(y).unwrap().get_mut(x).unwrap();
+                                    if *tile == Tile::Live {
+                                        *tile = Tile::Empty;
+                                        let tile =
+                                            shaft.get_mut(y).unwrap().get_mut(x + 1).unwrap();
+                                        *tile = Tile::Live;
+                                    }
+                                }
+                            }
+                            bounding_box = (
+                                (bounding_box.0 .0 + 1, bounding_box.0 .1),
+                                (bounding_box.1 .0 + 1, bounding_box.1 .1),
+                            );
+                        }
+                    }
+                }
+            };
+            let mut can_move = true;
+            for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                for y in bounding_box.0 .1..=bounding_box.1 .1 {
+                    let tile = shaft.get(y).unwrap().get(x).unwrap();
+                    let other_tile = shaft.get(y + 1).unwrap().get(x).unwrap();
+                    if *tile == Tile::Live && *other_tile == Tile::Dead {
+                        can_move = false;
+                    }
+                }
+            }
+            // for line in &shaft {
+            //     for tile in line {
+            //         print!("{}", tile);
+            //     }
+            //     println!();
+            // }
+            if can_move {
+                for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                    for y in (bounding_box.0 .1..=bounding_box.1 .1).rev() {
+                        let tile = shaft.get_mut(y).unwrap().get_mut(x).unwrap();
+                        if *tile == Tile::Live {
+                            *tile = Tile::Empty;
+                            let tile = shaft.get_mut(y + 1).unwrap().get_mut(x).unwrap();
+                            *tile = Tile::Live;
+                        }
+                    }
+                }
+                bounding_box = (
+                    (bounding_box.0 .0, bounding_box.0 .1 + 1),
+                    (bounding_box.1 .0, bounding_box.1 .1 + 1),
+                );
+            } else {
+                for x in bounding_box.0 .0..=bounding_box.1 .0 {
+                    for y in bounding_box.0 .1..=bounding_box.1 .1 {
+                        let tile = shaft.get_mut(y).unwrap().get_mut(x).unwrap();
+                        if *tile == Tile::Live {
+                            *tile = Tile::Dead;
+                        }
+                    }
+                }
+                break;
+            }
+        }
+        'outer: loop {
+            shaft.pop_front();
+            for x in shaft.get(0).unwrap() {
+                if *x == Tile::Dead {
+                    break 'outer;
+                }
+            }
+        }
+        if jet_generator.current_position == 0 && rock == Rock::Square {
+            let last_line = shaft.get(0).unwrap().to_owned();
+            for tile in &last_line {
+                print!("{}", tile);
+            }
+            println!();
+            let safety_floor = vec![Tile::Dead; 7];
+            let floors = vec![last_line, safety_floor];
+            let (height, _, _) = simulate_shaft_with_floor(1, jet_generator.clone(), floors);
+            if height == 3 {
+                //next item is line
+                //line is guaranteed to land as if floor is whole
+                //jet_generator is at default position
+                return (shaft.len(), count);
+            }
+        }
+    }
+    panic!();
 }
 
 fn get_jet_generator(filepath: &str) -> JetGenerator {
@@ -501,7 +733,7 @@ impl Iterator for RockGenerator {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 enum Rock {
     Flat,
     Cross,
