@@ -6,25 +6,36 @@ fn main() {
     println!("part_one: {}", part_one("input2.txt"));
     // println!("part_one: {}", part_one("input1.txt"));
     println!("part_two: {}", part_two("input2.txt"));
+    // println!("test: {}", test("input2.txt"));
     // println!("part_two: {}", part_two("input1.txt"));
 }
 
+fn test(filepath: &str) -> usize {
+    let mut jet_generator = get_jet_generator(filepath);
+    let (base, floors, current_position) =
+        simulate_shaft_with_floor(40, jet_generator.clone(), vec![vec![Tile::Dead; 7]]);
+    println!("!!!!");
+    jet_generator.current_position = current_position;
+    let (base, floors, _) = simulate_shaft_with_floor(0, jet_generator.clone(), floors);
+    0
+}
+
 fn part_one(filepath: &str) -> usize {
-    simulate_shaft(2022, get_jet_generator(filepath))
+    simulate_shaft(10000, get_jet_generator(filepath))
 }
 
 fn part_two(filepath: &str) -> usize {
     let jet_generator = get_jet_generator(filepath);
     let jet_generator_length = jet_generator.length;
     let rock_count = 5;
-    let common = jet_generator_length * rock_count;
+    let common = 10000 * rock_count;
     let target: usize = 1000000000000;
-    println!("{},{}", jet_generator_length, common);
+    // println!("{},{}", jet_generator_length, common);
     let mut results = Vec::new();
     for size in 0..20 {
         let first = simulate_shaft(common * size, jet_generator.clone());
         results.push(first);
-        println!("{}", first);
+        // println!("{}: {}", common * size, first);
         for (idx, result1) in results.iter().enumerate() {
             for x in idx + 1..results.len() {
                 let result2 = results.get(x).unwrap();
@@ -36,11 +47,19 @@ fn part_two(filepath: &str) -> usize {
                         //you can add result2-result1 to simulate (x-idx) * common * size iterations
 
                         let base_iterations = idx * common; //base iterations is the amount of iterations to reach the beginning of the repetition
-                        let (base, floor) = simulate_shaft_with_floor(
+                        let (base, floors, current_position) = simulate_shaft_with_floor(
                             base_iterations,
                             jet_generator.clone(),
-                            vec![Tile::Dead; 7],
+                            vec![vec![Tile::Dead; 7]],
                         );
+                        // for line in &floors {
+                        //     for tile in line {
+                        //         print!("{}", tile);
+                        //     }
+                        //     println!();
+                        // }
+                        // println!();
+                        let base = base - 1;
                         assert_eq!(base, *result1); //base is the height at the beginning of the repetition
                         let diff = result2 - result1; //diff is the height of the repetition
                         let diff_iterations = (x - idx) * common; //the amount of iterations to get the repetition
@@ -49,16 +68,26 @@ fn part_two(filepath: &str) -> usize {
                         let skipped = possible_to_skip * diff;
                         let remaining_iterations2 =
                             remaining_iterations - (possible_to_skip * diff_iterations); //remaining iterations that have to be simulated
-                        let (excess, _) = simulate_shaft_with_floor(
+                        let floors_height = floors.len();
+                        let mut jet_generator = jet_generator;
+                        jet_generator.current_position = current_position;
+                        // println!("{:?}", jet_generator);
+                        let (excess, floors, _) = simulate_shaft_with_floor(
                             remaining_iterations2,
                             jet_generator.clone(),
-                            floor,
+                            floors,
                         );
-                        println!("base_iterations:{},diff: {},diff_iterations:{},remaining_iterations:{},possible_to_skip:{},skipped:{},remaining_iterations2:{},excess:{}",base_iterations, diff, diff_iterations, remaining_iterations, possible_to_skip, skipped, remaining_iterations2,excess);
-                        println!("!!¤!¤!{}", base + skipped + excess);
+                        // for line in &floors {
+                        //     for tile in line {
+                        //         print!("{}", tile);
+                        //     }
+                        //     println!();
+                        // }
+                        println!("base:{},base_iterations:{},diff: {},diff_iterations:{},remaining_iterations:{},possible_to_skip:{},skipped:{},remaining_iterations2:{},excess:{}, floors_height: {}",base,base_iterations, diff, diff_iterations, remaining_iterations, possible_to_skip, skipped, remaining_iterations2,excess, floors_height);
+                        println!("!!¤!¤!{}", base + skipped + excess - floors_height);
                         println!("!!!!!!!!!{}", result2 - result1);
                         println!("!!!!!!{}", result1);
-                        return base + skipped + excess;
+                        return base + skipped + excess - floors_height;
                     }
                 }
             }
@@ -69,18 +98,20 @@ fn part_two(filepath: &str) -> usize {
 
 fn simulate_shaft(target: usize, mut jet_generator: JetGenerator) -> usize {
     let floor = vec![Tile::Dead; 7];
-    simulate_shaft_with_floor(target, jet_generator, floor).0
+    let floors = vec![floor];
+    simulate_shaft_with_floor(target, jet_generator, floors).0 - 1
 }
 
 fn simulate_shaft_with_floor(
     target: usize,
     mut jet_generator: JetGenerator,
-    floor: Vec<Tile>,
-) -> (usize, Vec<Tile>) {
+    floors: Vec<Vec<Tile>>,
+) -> (usize, Vec<Vec<Tile>>, usize) {
     let mut shaft = VecDeque::new();
     let width = 7;
-
-    shaft.push_front(floor);
+    for floor in floors {
+        shaft.push_back(floor);
+    }
     for rock in RockGenerator::new(target) {
         for _ in 0..3 {
             shaft.push_front(vec![Tile::Empty; width]); //three empty rows before next rock
@@ -349,7 +380,21 @@ fn simulate_shaft_with_floor(
             }
         }
     }
-    (shaft.len() - 1, shaft.pop_front().unwrap())
+    // for line in &shaft {
+    //     for tile in line {
+    //         print!("{}", tile);
+    //     }
+    //     println!();
+    // }
+    let height = shaft.len();
+    let mut floors = Vec::new();
+    for _ in 0..20 {
+        if !shaft.is_empty() {
+            floors.push(shaft.pop_front().unwrap());
+        }
+    }
+    // println!("{:#?}", jet_generator);
+    (height, floors, jet_generator.current_position)
 }
 
 fn get_jet_generator(filepath: &str) -> JetGenerator {
@@ -365,7 +410,7 @@ fn get_jet_generator(filepath: &str) -> JetGenerator {
     }
     JetGenerator::new(directions)
 }
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct JetGenerator {
     directions: Vec<Direction>,
     current_position: usize,
